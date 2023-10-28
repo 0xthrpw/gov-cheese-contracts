@@ -17,6 +17,12 @@ interface IVerifier {
 abstract contract GovernmentCheese is MerkleTreeWithHistory, MerklePrivilege, ReentrancyGuard {
 	IVerifier public immutable verifier;
 	uint256 public denomination;
+	
+	struct Proof {
+		uint256[2] pi_A;
+		uint256[2][2] pi_B;
+		uint256[2] pi_C;
+	}
 
 	mapping(bytes32 => bool) public nullifierHashes;
 	// we store all commitments just to prevent accidental deposits with the same commitment
@@ -73,12 +79,12 @@ abstract contract GovernmentCheese is MerkleTreeWithHistory, MerklePrivilege, Re
 	function _processDeposit() internal virtual;
 
 	function _verifyProof(
-		bytes memory proof, 
+		Proof memory proof, 
 		uint[6] memory inputs
 	) internal returns (bool r) {
         // solidity does not support decoding uint[2][2] yet
-        (uint[2] memory a, uint[2] memory b1, uint[2] memory b2, uint[2] memory c) = abi.decode(proof, (uint[2], uint[2], uint[2], uint[2]));
-        return verifier.verifyProof(a, [b1, b2], c, inputs);
+        // (uint[2] memory a, uint[2] memory b1, uint[2] memory b2, uint[2] memory c) = abi.decode(proof, (uint[2], uint[2], uint[2], uint[2]));
+        return verifier.verifyProof(proof.pi_A, proof.pi_B, proof.pi_C, inputs);
     }
 
 	/**
@@ -90,7 +96,7 @@ abstract contract GovernmentCheese is MerkleTreeWithHistory, MerklePrivilege, Re
 		- optional fee that goes to the transaction sender (usually a relay)
 	*/
 	function withdraw(
-		bytes calldata proof,
+		Proof calldata proof,
 		// uint[1] calldata _pubSignals,
 		bytes32 _root,
 		bytes32 _nullifierHash,
