@@ -6,7 +6,12 @@ import "./MerklePrivilege.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 interface IVerifier {
-	function verifyProof(bytes memory _proof, uint256[6] memory _input) external returns (bool);
+	function verifyProof(
+		uint[2] calldata _pA, 
+		uint[2][2] calldata _pB, 
+		uint[2] calldata _pC, 
+		uint[6] calldata _pubSignals
+	) external returns (bool);
 }
 
 abstract contract GovernmentCheese is MerkleTreeWithHistory, MerklePrivilege, ReentrancyGuard {
@@ -67,6 +72,15 @@ abstract contract GovernmentCheese is MerkleTreeWithHistory, MerklePrivilege, Re
 	/** @dev this function is defined in a child contract */
 	function _processDeposit() internal virtual;
 
+	function _verifyProof(
+		bytes memory proof, 
+		uint[6] memory inputs
+	) internal returns (bool r) {
+        // solidity does not support decoding uint[2][2] yet
+        (uint[2] memory a, uint[2] memory b1, uint[2] memory b2, uint[2] memory c) = abi.decode(proof, (uint[2], uint[2], uint[2], uint[2]));
+        return verifier.verifyProof(a, [b1, b2], c, inputs);
+    }
+
 	/**
 		@dev Withdraw a deposit from the contract. `proof` is a zkSNARK proof data, and input is an array of circuit public inputs
 		`input` array consists of:
@@ -76,29 +90,31 @@ abstract contract GovernmentCheese is MerkleTreeWithHistory, MerklePrivilege, Re
 		- optional fee that goes to the transaction sender (usually a relay)
 	*/
 	function withdraw(
-		bytes calldata _proof,
+		bytes calldata proof,
+		// uint[1] calldata _pubSignals,
 		bytes32 _root,
 		bytes32 _nullifierHash,
 		address _recipient,
 		address _relayer,
-		uint256 _fee,
-		uint256 _refund,
-		uint256 _index,
-		uint256 _priv,
+		uint _fee,
+		uint _refund,
+		uint _index,
+		uint _priv,
 		bytes32[] calldata _merkleProof
 	) external payable nonReentrant {
 		require(_fee <= denomination, "Fee exceeds transfer value");
 		require(!nullifierHashes[_nullifierHash], "The note has been already spent");
 		require(isKnownRoot(_root), "Cannot find your merkle root"); 
 		require(hasPrivilege(_index, _priv, _merkleProof), "No Privileges");
+
 		require(
-			verifier.verifyProof(
-				_proof,
+			_verifyProof(
+				proof,
 				[
-					uint256(_root), 
-					uint256(_nullifierHash), 
-					uint256(uint160(_recipient)), 
-					uint256(uint160(_relayer)), 
+					uint(_root), 
+					uint(_nullifierHash), 
+					uint(uint160(_recipient)), 
+					uint(uint160(_relayer)), 
 					_fee, 
 					_refund
 				]

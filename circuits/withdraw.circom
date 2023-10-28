@@ -1,7 +1,7 @@
 pragma circom 2.0.0;
 
 include "../node_modules/circomlib/circuits/bitify.circom";
-include "../node_modules/circomlib/circuits/pedersen.circom";
+include "../node_modules/circomlib/circuits/mimcsponge.circom";
 include "merkleTree.circom";
 
 // computes Pedersen(nullifier + secret)
@@ -11,20 +11,18 @@ template CommitmentHasher() {
     signal output commitment;
     signal output nullifierHash;
 
-    component commitmentHasher = Pedersen(496);
-    component nullifierHasher = Pedersen(248);
-    component nullifierBits = Num2Bits(248);
-    component secretBits = Num2Bits(248);
-    nullifierBits.in <== nullifier;
-    secretBits.in <== secret;
-    for (var i = 0; i < 248; i++) {
-        nullifierHasher.in[i] <== nullifierBits.out[i];
-        commitmentHasher.in[i] <== nullifierBits.out[i];
-        commitmentHasher.in[i + 248] <== secretBits.out[i];
-    }
+    component commitmentHasher = MiMCSponge(2, 220, 1);
+    component nullifierHasher = MiMCSponge(1, 220, 1);
 
-    commitment <== commitmentHasher.out[0];
-    nullifierHash <== nullifierHasher.out[0];
+    commitmentHasher.ins[0] <== nullifier;
+    commitmentHasher.ins[1] <== secret;
+    commitmentHasher.k <== 0;
+
+    nullifierHasher.ins[0] <== nullifier;
+    nullifierHasher.k <== 0;
+
+    commitment <== commitmentHasher.outs[0];
+    nullifierHash <== nullifierHasher.outs[0];
 }
 
 // Verifies that commitment that corresponds to given secret and nullifier is included in the merkle tree of deposits
@@ -66,4 +64,4 @@ template Withdraw(levels) {
     refundSquare <== refund * refund;
 }
 
-component main = Withdraw(20);
+component main {public [root,nullifierHash,recipient,relayer,fee,refund]} = Withdraw(20);
