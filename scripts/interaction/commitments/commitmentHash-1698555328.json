@@ -1,0 +1,7 @@
+{
+  "commitmentHash": {
+    "commitment": "0x16113a2ed43787b50846e506382a8dd9dc596aabe3cf1d37558072d44d7f89ff",
+    "nullifier": "0x334cb55ef0610c9a3150917b2dec5c8156c849413200a4e9da79204598c2fe",
+    "secret": "0xa4b025055dc96b5928c4e57b4bd7ab0d1111315c0519d710cea67106b59a8c"
+  }
+}
